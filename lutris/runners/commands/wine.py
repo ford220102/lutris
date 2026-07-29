@@ -389,6 +389,13 @@ def wineexec(
         logger.warning("Proton is not compatible with 32-bit prefixes, forcing win64")
         arch = "win64"
 
+    # A caller can provide a standalone Wine binary without a runner object.
+    # Keep the temporary runner used for environment setup from resolving its
+    # own default version (which may be Proton/umu) instead of the supplied
+    # Wine binary when it calculates WINEARCH.
+    if not runner_was_provided:
+        runner._wine_arch = arch
+
     if not working_dir:
         if os.path.isfile(executable):
             working_dir = os.path.dirname(executable)
@@ -435,7 +442,7 @@ def wineexec(
     if proton_verb:
         wineenv["PROTON_VERB"] = proton_verb
 
-    baseenv = runner.get_env(disable_runtime=disable_runtime)
+    baseenv = runner.get_env(disable_runtime=disable_runtime, wine_path=wine_path)
     baseenv.update(wineenv)
     baseenv.update(env)
 

@@ -142,6 +142,8 @@ class TestWineArchitecture(TestCase):
             )
 
         self.assertEqual(execute.call_args.kwargs["env"]["WINEARCH"], "win32")
+        self.assertEqual(runner._wine_arch, "win32")
+        runner.get_env.assert_called_once_with(disable_runtime=True, wine_path="/custom/wine/bin/wine")
 
     def test_runner_architecture_uses_selected_wine_binary_without_a_prefix(self):
         runner = wine.wine(prefix="/missing/prefix", wine_arch="auto")
