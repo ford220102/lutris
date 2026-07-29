@@ -95,3 +95,61 @@ class TestWineArchitecture(TestCase):
             )
 
         self.assertEqual(execute.call_args.kwargs["env"]["WINEARCH"], "win32")
+
+    def test_wineexec_honors_runner_architecture_without_a_prefix(self):
+        runner = MagicMock()
+        runner.wine_arch = "win32"
+        runner.system_config = {"disable_runtime": True}
+        runner.get_env.return_value = {}
+
+        with (
+            patch.object(wine_commands.proton, "is_proton_path", return_value=False),
+            patch.object(wine_commands, "get_real_executable", return_value=("winecfg", [], None)),
+            patch.object(wine_commands, "is_prefix_directory", return_value=False),
+            patch.object(wine_commands, "create_prefix"),
+            patch.object(wine_commands, "use_lutris_runtime", return_value=False),
+            patch.object(wine_commands.system, "execute", return_value="") as execute,
+        ):
+            wine_commands.wineexec(
+                "winecfg",
+                prefix="/missing/prefix",
+                wine_path="/opt/wine/bin/wine",
+                runner=runner,
+                blocking=True,
+            )
+
+        self.assertEqual(execute.call_args.kwargs["env"]["WINEARCH"], "win32")
+
+    def test_wineexec_uses_custom_wine_path_without_runner_executable_lookup(self):
+        runner = MagicMock()
+        runner.system_config = {"disable_runtime": True}
+        runner.get_env.return_value = {}
+
+        with (
+            patch.object(wine_commands, "import_runner", return_value=lambda **_kwargs: runner),
+            patch.object(wine_commands.proton, "is_proton_path", return_value=False),
+            patch.object(wine_commands, "get_real_executable", return_value=("winecfg", [], None)),
+            patch.object(wine_commands, "is_prefix_directory", return_value=True),
+            patch.object(wine_utils, "WINE_DEFAULT_ARCH", "win32"),
+            patch.object(wine_commands, "use_lutris_runtime", return_value=False),
+            patch.object(wine_commands.system, "execute", return_value="") as execute,
+        ):
+            wine_commands.wineexec(
+                "winecfg",
+                prefix="/existing/prefix",
+                wine_path="/custom/wine/bin/wine",
+                blocking=True,
+            )
+
+        self.assertEqual(execute.call_args.kwargs["env"]["WINEARCH"], "win32")
+
+    def test_runner_architecture_uses_selected_wine_binary_without_a_prefix(self):
+        runner = wine.wine(prefix="/missing/prefix", wine_arch="auto")
+
+        with (
+            patch.object(runner, "get_executable", return_value="/opt/wine/bin/wine"),
+            patch.object(wine_utils, "WINE_DEFAULT_ARCH", "win32"),
+            patch.object(wine_utils.proton, "is_proton_path", return_value=False),
+            patch.object(wine_utils.system, "path_exists", return_value=True),
+        ):
+            self.assertEqual(runner.wine_arch, "win64")

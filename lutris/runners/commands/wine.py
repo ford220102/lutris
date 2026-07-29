@@ -21,7 +21,6 @@ from lutris.util.wine import proton
 from lutris.util.wine.cabinstall import CabInstaller
 from lutris.util.wine.prefix import WinePrefixManager
 from lutris.util.wine.wine import (
-    WINE_DEFAULT_ARCH,
     WINE_DIR,
     detect_arch,
     get_overrides_env,
@@ -128,14 +127,20 @@ def is_disallowed_fs(prefix):
 
 
 def create_prefix(
-    prefix, wine_path=None, arch=WINE_DEFAULT_ARCH, overrides=None, install_gecko=None, install_mono=None, runner=None
+    prefix, wine_path=None, arch=None, overrides=None, install_gecko=None, install_mono=None, runner=None
 ):
     """Create a new Wine prefix."""
+    runner_was_provided = runner is not None
     if overrides is None:
         overrides = {}
     if not prefix:
         raise ValueError("No Wine prefix path given")
     prefix = os.path.expanduser(prefix)
+
+    if arch not in ("win32", "win64"):
+        runner_arch = getattr(runner, "wine_arch", None) if runner_was_provided else None
+        arch = runner_arch if runner_arch in ("win32", "win64") else detect_arch(prefix, wine_path)
+
     logger.info("Creating a %s prefix in %s", arch, prefix)
 
     # Follow symlinks, don't delete existing ones as it would break some setups
@@ -255,6 +260,7 @@ def create_prefix(
 def winekill(prefix, arch=None, wine_path="", env=None, initial_pids=None, runner=None):
     """Kill processes in Wine prefix."""
 
+    runner_was_provided = runner is not None
     initial_pids = initial_pids or []
     if not wine_path:
         if not runner:
@@ -262,7 +268,8 @@ def winekill(prefix, arch=None, wine_path="", env=None, initial_pids=None, runne
         wine_path = runner.get_executable()
 
     if arch not in ("win32", "win64"):
-        arch = detect_arch(prefix, wine_path)
+        runner_arch = getattr(runner, "wine_arch", None) if runner_was_provided else None
+        arch = runner_arch if runner_arch in ("win32", "win64") else detect_arch(prefix, wine_path)
 
     if not env:
         env = {
@@ -355,6 +362,7 @@ def wineexec(
         Process results if the process is running in blocking mode or
         MonitoredCommand instance otherwise.
     """
+    runner_was_provided = runner is not None
     env = env or {}
     exclude_processes = exclude_processes or []
     include_processes = include_processes or []
@@ -374,7 +382,8 @@ def wineexec(
             raise MissingExecutableError("The wine path could not be determined.")
 
     if arch not in ("win32", "win64"):
-        arch = detect_arch(prefix, wine_path)
+        runner_arch = getattr(runner, "wine_arch", None) if runner_was_provided else None
+        arch = runner_arch if runner_arch in ("win32", "win64") else detect_arch(prefix, wine_path)
 
     if arch == "win32" and (proton.is_umu_path(wine_path) or proton.is_proton_path(wine_path)):
         logger.warning("Proton is not compatible with 32-bit prefixes, forcing win64")

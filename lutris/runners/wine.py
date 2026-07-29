@@ -53,7 +53,6 @@ from lutris.util.wine.prefix import DEFAULT_DLL_OVERRIDES, WinePrefixManager, fi
 from lutris.util.wine.vkd3d import VKD3DManager
 from lutris.util.wine.wine import (
     GE_PROTON_LATEST,
-    WINE_DEFAULT_ARCH,
     WINE_PATHS,
     detect_arch,
     get_default_wine_version,
@@ -758,11 +757,7 @@ class wine(Runner):
         Get it from the config or detect it from the prefix"""
         arch = self._wine_arch or self.game_config.get("arch") or "auto"
         if arch not in ("win32", "win64"):
-            prefix_path = self.prefix_path
-            if prefix_path:
-                arch = detect_arch(prefix_path, self.get_executable())
-            else:
-                arch = WINE_DEFAULT_ARCH
+            arch = detect_arch(self.prefix_path, self.get_executable())
         return arch
 
     def get_runner_version(self, version: str | None = None) -> "RunnerVersionDict | None":
@@ -998,6 +993,7 @@ class wine(Runner):
             config=self,
             env=self.get_env(os_env=True),
             runner=self,
+            arch=self.wine_arch,
         )
 
     def run_wineexec(self, *args):
