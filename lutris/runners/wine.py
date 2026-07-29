@@ -53,7 +53,6 @@ from lutris.util.wine.prefix import DEFAULT_DLL_OVERRIDES, WinePrefixManager, fi
 from lutris.util.wine.vkd3d import VKD3DManager
 from lutris.util.wine.wine import (
     GE_PROTON_LATEST,
-    WINE_DEFAULT_ARCH,
     WINE_PATHS,
     detect_arch,
     get_default_wine_version,
@@ -758,11 +757,7 @@ class wine(Runner):
         Get it from the config or detect it from the prefix"""
         arch = self._wine_arch or self.game_config.get("arch") or "auto"
         if arch not in ("win32", "win64"):
-            prefix_path = self.prefix_path
-            if prefix_path:
-                arch = detect_arch(prefix_path, self.get_executable())
-            else:
-                arch = WINE_DEFAULT_ARCH
+            arch = detect_arch(self.prefix_path, self.get_executable())
         return arch
 
     def get_runner_version(self, version: str | None = None) -> "RunnerVersionDict | None":
@@ -998,6 +993,7 @@ class wine(Runner):
             config=self,
             env=self.get_env(os_env=True),
             runner=self,
+            arch=self.wine_arch,
         )
 
     def run_wineexec(self, *args):
@@ -1213,7 +1209,7 @@ class wine(Runner):
         logger.info("Waiting %d seconds for client to be ready", wait_time)
         time.sleep(wait_time)
 
-    def get_dll_managers(self, enabled_only=False):
+    def get_dll_managers(self, enabled_only=False, wine_path=None):
         """Returns the DLL managers in a dict; the keys are the managers themselves,
         and the values are the enabled flags for them. If 'enabled_only' is true,
         only enabled managers are returned, so disabled managers are not created."""
@@ -1226,7 +1222,7 @@ class wine(Runner):
         ]
 
         managers = {}
-        is_proton = proton.is_proton_path(self.get_executable())
+        is_proton = proton.is_proton_path(wine_path or self.get_executable())
 
         for manager_class, enabled_option, version_option in manager_classes:
             enabled = bool(self.runner_config.get(enabled_option))
@@ -1256,7 +1252,7 @@ class wine(Runner):
             overrides = {}
         return overrides
 
-    def get_env(self, os_env=False, disable_runtime=False):
+    def get_env(self, os_env=False, disable_runtime=False, wine_path=None):
         """Return environment variables used by the game"""
         # Always false to runner.get_env, the default value
         # of os_env is inverted in the wine class,
@@ -1274,7 +1270,7 @@ class wine(Runner):
                 env["DXVK_LOG_LEVEL"] = "debug"
                 env["UMU_LOG"] = "debug"
         env["WINEARCH"] = self.wine_arch
-        wine_exe = self.get_executable()
+        wine_exe = wine_path or self.get_executable()
         is_proton = proton.is_proton_path(wine_exe)
 
         wine_config_version = self.read_version_from_config()
@@ -1357,7 +1353,7 @@ class wine(Runner):
             if self.runner_config.get("proton_hdr"):
                 env["PROTON_ENABLE_HDR"] = "1"
 
-        for dll_manager in self.get_dll_managers(enabled_only=True):
+        for dll_manager in self.get_dll_managers(enabled_only=True, wine_path=wine_path):
             self.dll_overrides.update(dll_manager.get_enabling_dll_overrides())
 
         overrides = self.get_dll_overrides()
