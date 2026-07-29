@@ -41,7 +41,7 @@ def set_regedit(
     type="REG_SZ",  # pylint: disable=redefined-builtin
     wine_path=None,
     prefix=None,
-    arch=WINE_DEFAULT_ARCH,
+    arch=None,
 ):
     """Add keys to the windows registry.
 
@@ -63,8 +63,11 @@ def set_regedit(
     os.remove(reg_path)
 
 
-def set_regedit_file(filename, wine_path=None, prefix=None, arch=WINE_DEFAULT_ARCH, proton_verb=None):
+def set_regedit_file(filename, wine_path=None, prefix=None, arch=None, proton_verb=None):
     """Apply a regedit file to the Windows registry."""
+    if arch not in ("win32", "win64"):
+        arch = detect_arch(prefix, wine_path)
+
     if arch == "win64" and wine_path and system.path_exists(wine_path + "64"):
         # Use wine64 by default if set to a 64bit prefix. Using regular wine
         # will prevent some registry keys from being created. Most likely to be
@@ -85,7 +88,7 @@ def set_regedit_file(filename, wine_path=None, prefix=None, arch=WINE_DEFAULT_AR
     )
 
 
-def delete_registry_key(key, wine_path=None, prefix=None, arch=WINE_DEFAULT_ARCH, proton_verb=None):
+def delete_registry_key(key, wine_path=None, prefix=None, arch=None, proton_verb=None):
     """Deletes a registry key from a Wine prefix"""
 
     if not wine_path or proton.is_proton_path(wine_path):
@@ -249,10 +252,18 @@ def create_prefix(
     prefix_manager.setup_defaults()
 
 
-def winekill(prefix, arch=WINE_DEFAULT_ARCH, wine_path="", env=None, initial_pids=None, runner=None):
+def winekill(prefix, arch=None, wine_path="", env=None, initial_pids=None, runner=None):
     """Kill processes in Wine prefix."""
 
     initial_pids = initial_pids or []
+    if not wine_path:
+        if not runner:
+            runner = import_runner("wine")()
+        wine_path = runner.get_executable()
+
+    if arch not in ("win32", "win64"):
+        arch = detect_arch(prefix, wine_path)
+
     if not env:
         env = {
             "WINEARCH": arch,
@@ -266,10 +277,6 @@ def winekill(prefix, arch=WINE_DEFAULT_ARCH, wine_path="", env=None, initial_pid
         command = [proton.get_umu_path(), "wineboot", "-k"]
         env["PROTONPATH"] = proton.get_proton_path_by_path(wine_path)
     else:
-        if not wine_path:
-            if not runner:
-                runner = import_runner("wine")()
-            wine_path = runner.get_executable()
         wine_root = os.path.dirname(wine_path)
 
         command = [os.path.join(wine_root, "wineserver"), "-k"]
@@ -315,7 +322,7 @@ def wineexec(
     prefix: str,
     args: str = "",
     wine_path: str | None = None,
-    arch: str = WINE_DEFAULT_ARCH,
+    arch: str | None = None,
     working_dir: str | None = None,
     winetricks_wine: str = "",
     blocking: bool = False,
@@ -366,6 +373,9 @@ def wineexec(
         if not wine_path:  # to satisfy mypy really
             raise MissingExecutableError("The wine path could not be determined.")
 
+    if arch not in ("win32", "win64"):
+        arch = detect_arch(prefix, wine_path)
+
     if arch == "win32" and (proton.is_umu_path(wine_path) or proton.is_proton_path(wine_path)):
         logger.warning("Proton is not compatible with 32-bit prefixes, forcing win64")
         arch = "win64"
@@ -388,8 +398,6 @@ def wineexec(
         wineenv["WINEPREFIX"] = prefix
 
     # Create prefix if necessary
-    if arch not in ("win32", "win64"):
-        arch = detect_arch(prefix, wine_path)
     if not is_prefix_directory(prefix):
         wine_bin = winetricks_wine if winetricks_wine and not proton.is_proton_path(wine_path) else wine_path
         create_prefix(prefix, wine_path=wine_bin, arch=arch, runner=runner)
@@ -480,7 +488,7 @@ def find_winetricks(
 def winetricks(
     app: str | None,
     prefix: str,
-    arch: str = WINE_DEFAULT_ARCH,
+    arch: str | None = None,
     silent: bool = True,
     wine_path: str | None = None,
     config=None,
@@ -543,7 +551,7 @@ def winetricks(
     )
 
 
-def winecfg(wine_path=None, prefix=None, arch=WINE_DEFAULT_ARCH, config=None, env=None, runner=None, proton_verb=None):
+def winecfg(wine_path=None, prefix=None, arch=None, config=None, env=None, runner=None, proton_verb=None):
     """Execute winecfg."""
 
     if not wine_path:
