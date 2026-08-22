@@ -23,12 +23,16 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-gi python3-setuptools libgirepository1.0-dev gettext
+          sudo apt-get install -y python3-gi python3-setuptools libgirepository1.0-dev gir1.2-gtk-3.0 gettext pkg-config
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel PyGObject
 
       - name: Build Source Tarball
         run: |
