@@ -75,11 +75,16 @@ setup(
     and from most gaming systems. By leveraging and combining existing emulators,
     engine re-implementations and compatibility layers, it gives you a central
     interface to launch all your games.""",
+    python_requires=">=3.10",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Programming Language :: Python",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Operating System :: Linux",
         "Topic :: Games/Entertainment",
     ],

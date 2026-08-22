@@ -13,6 +13,18 @@ requires-python = ">=3.10"
 
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: Linux",
+    "Topic :: Games/Entertainment",
+]
 dependencies = [
     "PyYAML",
     "lxml",
